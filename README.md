@@ -34,7 +34,7 @@ Pmod I2S2 ADC -- 48 kHz, 24-bit I2S
       v
 INT8 causal Transformer
       |
-      +--> bypass / short / medium / long / filter
+      +--> echo / reverb / high pitch / low pitch / bypass
       |
       v
 FPGA audio effect --> Pmod I2S2 DAC --> powered speakers
@@ -52,15 +52,29 @@ FPGA audio effect --> Pmod I2S2 DAC --> powered speakers
 
 The Pmod I2S2 expects a line-level source. Early tests will use prerecorded commands from a phone or computer, or a microphone routed through a preamplifier/audio interface. A bare microphone cannot connect directly to the Pmod input.
 
+## Dataset collection dashboard
+
+The repository includes a dependency-free local dashboard for recording, uploading, labeling, reviewing, and deleting training samples. It also tracks progress against the minimum collection targets and explains how to collect every required sample type.
+
+Run it from the repository root:
+
+```bash
+python3 dashboard/server.py
+```
+
+Then open [http://127.0.0.1:8000](http://127.0.0.1:8000). The dashboard records from the computer microphone as mono PCM WAV and accepts existing audio files. Samples are stored under `data/raw/`, while searchable metadata is stored in `data/manifest.json`.
+
+Both paths are ignored by Git because raw recordings may be large or contain a speaker's voice. Back them up separately before deleting or moving the repository.
+
 ## Command mapping
 
 | Spoken command | FPGA action |
 | --- | --- |
+| `echo` | Apply a delayed copy with controlled feedback |
+| `reverb` | Apply a multi-tap reverberation effect |
+| `high pitch` | Shift the audio upward by a fixed interval |
+| `low pitch` | Shift the audio downward by a fixed interval |
 | `bypass` | Pass audio without a digital effect |
-| `short` | Apply a 50 ms delay |
-| `medium` | Apply a 150 ms delay |
-| `long` | Apply a 300 ms delay |
-| `filter` | Enable the 3 kHz low-pass effect |
 | Unknown/noise | Make no change |
 | Silence | Make no change |
 
@@ -155,12 +169,15 @@ Fixed-point validation is required because rounding, saturation, FFT scaling, co
 
 The effect engine remains independent of the classifier so it can be tested before machine-learning integration.
 
+- Echo using a block-RAM delay line, wet/dry mixing, and controlled feedback
+- Reverb using multiple delay taps and controlled decay
+- Fixed upward pitch shift
+- Fixed downward pitch shift
 - Digital bypass
-- 50, 150, and 300 ms block-RAM delay presets
-- 50% dry and 50% delayed mix
-- Saturating fixed-point arithmetic
-- Fixed 3 kHz low-pass filter
+- Saturating fixed-point arithmetic and output limiting
 - Muted or faded mode transitions to avoid clicks
+
+Echo time, reverb decay, pitch intervals, and wet/dry levels will be selected after software prototypes are evaluated. Pitch shifting will use buffered resampling or an overlap-based method so its hardware cost and audio quality can be measured before the architecture is frozen.
 
 ## Benchmarks
 
@@ -186,9 +203,11 @@ The project will report measurements rather than subjective claims.
 
 ### Audio performance
 
-- Delay timing
+- Echo delay and feedback decay
+- Reverb decay time and impulse response
+- Pitch-shift accuracy in semitones or cents
 - Bypass gain and clipping level
-- Low-pass cutoff and frequency response
+- Output frequency response and artifact measurements
 - Thirty-minute playback test
 - Mode-change and power-cycle reliability
 
@@ -209,7 +228,7 @@ These are design targets and will be revised if the software feasibility study s
 2. **Audio bring-up:** Implement clocks, I2S pass-through, sample-rate conversion, button handling, LEDs, and Pico communication.
 3. **Feature extraction:** Implement windowing, FFT, noise profiling, spectral subtraction, mel accumulation, and normalization. Match Python test vectors.
 4. **Transformer accelerator:** Implement fixed-point matrix operations, attention, normalization, feed-forward layers, and classification. Load exported INT8 parameters.
-5. **Effects integration:** Connect accepted commands to the delay and filter engine with confidence thresholds and safe mode transitions.
+5. **Effects integration:** Connect accepted commands to the echo, reverb, pitch-shift, and bypass engine with confidence thresholds and safe mode transitions.
 6. **System verification:** Run the model, hardware, noise-robustness, and audio benchmarks and publish the measurements.
 7. **Future PCB:** Add the microphone and line-level analog interface, power distribution, connectors, test points, and removable module sockets.
 
@@ -218,6 +237,7 @@ These are design targets and will be revised if the software feasibility study s
 ```text
 fpga_accelerator/
 ├── README.md
+├── dashboard/            # Local recording, upload, labeling, and review interface
 ├── data/                 # Dataset instructions and metadata; raw recordings excluded from Git
 ├── model/                # Training, quantization, and evaluation code
 ├── reference/            # Fixed-point Python model and exported test vectors

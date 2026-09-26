@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Local training-data collection dashboard for the FPGA audio Transformer." />
+    <title>Audio Dataset Console</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Audio Dataset Console home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>
+          <strong>Audio Dataset Console</strong>
+          <small>FPGA Transformer collection workspace</small>
+        </span>
+      </a>
+      <nav aria-label="Dashboard sections">
+        <a href="#collect">Collect</a>
+        <a href="#coverage">Coverage</a>
+        <a href="#guide">Guide</a>
+        <a href="#library">Library</a>
+      </nav>
+      <div class="server-status"><span></span> Local storage active</div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Dataset operations</p>
+          <h1>Collect audio that the hardware can actually learn from.</h1>
+          <p class="hero-copy">Upload or record commands, calibration noise, silence, and difficult negatives. Every sample is stored locally with the metadata needed for reproducible training and FPGA validation.</p>
+        </div>
+        <div class="hero-sequence" aria-label="Collection sequence">
+          <span><b>01</b> Record noise</span>
+          <span><b>02</b> Speak command</span>
+          <span><b>03</b> Label conditions</span>
+          <span><b>04</b> Verify coverage</span>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Dataset summary">
+        <article><span>Total samples</span><strong id="metric-total">0</strong><small>stored locally</small></article>
+        <article><span>Command samples</span><strong id="metric-command">0</strong><small>five effect labels</small></article>
+        <article><span>Negative samples</span><strong id="metric-negative">0</strong><small>unknown + silence</small></article>
+        <article><span>Paired profiles</span><strong id="metric-paired">0%</strong><small>commands with noise reference</small></article>
+      </section>
+
+      <section class="workspace" id="collect">
+        <article class="panel collect-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">New sample</p>
+              <h2>Upload or record</h2>
+            </div>
+            <span class="step-badge">Required fields marked *</span>
+          </div>
+
+          <form id="sample-form">
+            <div class="field-grid">
+              <label>
+                <span>Sample type *</span>
+                <select id="sample-type" required>
+                  <option value="command">Spoken command</option>
+                  <option value="unknown">Unknown / negative</option>
+                  <option value="silence">Silence</option>
+                  <option value="calibration_noise">Calibration noise</option>
+                </select>
+              </label>
+              <label>
+                <span>Label *</span>
+                <select id="label" required></select>
+              </label>
+              <label>
+                <span>Speaker ID</span>
+                <input id="speaker" placeholder="e.g. hs01" autocomplete="off" />
+              </label>
+              <label>
+                <span>Session ID *</span>
+                <input id="session" placeholder="e.g. 2026-09-26-a" required autocomplete="off" />
+              </label>
+              <label>
+                <span>Environment *</span>
+                <select id="environment" required>
+                  <option value="clean_room">Clean room</option>
+                  <option value="fan_hvac">Fan / HVAC</option>
+                  <option value="electrical_hum">Electrical hum</option>
+                  <option value="static">Static / broadband noise</option>
+                  <option value="conversation">Background conversation</option>
+                  <option value="music">Background music</option>
+                  <option value="keyboard_impacts">Keyboard / impacts</option>
+                  <option value="outdoor">Outdoor / traffic</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label>
+                <span>Source distance</span>
+                <select id="distance">
+                  <option value="not_recorded">Not recorded</option>
+                  <option value="0.3_m">0.3 m</option>
+                  <option value="1_m">1 m</option>
+                  <option value="2_m">2 m</option>
+                </select>
+              </label>
+              <label>
+                <span>Dataset split</span>
+                <select id="split">
+                  <option value="unassigned">Unassigned</option>
+                  <option value="train">Train</option>
+                  <option value="validation">Validation</option>
+                  <option value="test">Test</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="audio-grid">
+              <section class="audio-source">
+                <div class="audio-source-title">
+                  <div><strong>Main audio *</strong><small>1.25 s command/negative or 1 s noise</small></div>
+                  <span id="main-state" class="file-state">No audio</span>
+                </div>
+                <label class="drop-zone" for="main-file">
+                  <input id="main-file" type="file" accept="audio/*,.wav,.flac,.mp3,.m4a,.ogg,.webm" multiple />
+                  <span class="upload-icon" aria-hidden="true">↑</span>
+                  <strong>Choose audio files</strong>
+                  <small>WAV preferred · multiple files allowed</small>
+                </label>
+                <div class="record-controls">
+                  <button id="record-main" class="button secondary" type="button">Record main audio</button>
+                  <button id="clear-main" class="text-button" type="button">Clear</button>
+                </div>
+                <audio id="main-preview" controls hidden></audio>
+              </section>
+
+              <section class="audio-source" id="noise-profile-card">
+                <div class="audio-source-title">
+                  <div><strong>Paired noise profile</strong><small>1 s, same environment, no speech</small></div>
+                  <span id="noise-state" class="file-state">Optional</span>
+                </div>
+                <label class="drop-zone compact" for="noise-file">
+                  <input id="noise-file" type="file" accept="audio/*,.wav,.flac,.mp3,.m4a,.ogg,.webm" />
+                  <span class="upload-icon" aria-hidden="true">+</span>
+                  <strong>Add calibration audio</strong>
+                  <small>Attach to noisy command samples</small>
+                </label>
+                <div class="record-controls">
+                  <button id="record-noise" class="button secondary" type="button">Record noise</button>
+                  <button id="clear-noise" class="text-button" type="button">Clear</button>
+                </div>
+                <audio id="noise-preview" controls hidden></audio>
+              </section>
+            </div>
+
+            <label class="notes-field">
+              <span>Notes</span>
+              <textarea id="notes" rows="2" placeholder="Volume, microphone, unusual noise, retake reason…"></textarea>
+            </label>
+
+            <div class="form-footer">
+              <p id="form-message" role="status">Files stay on this computer.</p>
+              <button class="button primary" type="submit">Save sample</button>
+            </div>
+          </form>
+        </article>
+
+        <aside class="panel protocol-panel">
+          <p class="eyebrow">Recording protocol</p>
+          <h2>Keep every take comparable</h2>
+          <ol class="protocol-list">
+            <li><b>Hold the setup still.</b><span>Use the same input gain for the paired noise and command.</span></li>
+            <li><b>Capture noise first.</b><span>Record one second with no talking or handling sounds.</span></li>
+            <li><b>Speak after the cue.</b><span>Center one complete command inside the 1.25-second clip.</span></li>
+            <li><b>Change one condition.</b><span>Vary speaker, session, distance, volume, or environment deliberately.</span></li>
+            <li><b>Protect the test set.</b><span>Assign entire sessions—not random clips—to validation or test.</span></li>
+          </ol>
+          <div class="protocol-note">
+            <strong>Recommended format</strong>
+            <span>Mono PCM WAV, 48 kHz, 16- or 24-bit. Other formats are accepted but should be converted before training.</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="coverage-section" id="coverage">
+        <div class="section-heading">
+          <div><p class="eyebrow">Coverage</p><h2>Minimum collection targets</h2></div>
+          <p>Targets describe the first personalized prototype with two speakers.</p>
+        </div>
+        <div id="coverage-grid" class="coverage-grid"></div>
+      </section>
+
+      <section class="guide-section" id="guide">
+        <div class="section-heading">
+          <div><p class="eyebrow">Collection guide</p><h2>Every sample type you need</h2></div>
+          <p>Collect real examples first. Controlled noise mixing expands the dataset later.</p>
+        </div>
+        <div class="guide-grid">
+          <article>
+            <span class="guide-number">01</span>
+            <h3>Effect commands</h3>
+            <p>Record <b>echo, reverb, high pitch, low pitch,</b> and <b>bypass</b>. Capture soft, normal, and loud speech at 0.3, 1, and 2 meters.</p>
+            <ul><li>1.25 seconds each</li><li>50 takes per speaker per command</li><li>At least three sessions</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">02</span>
+            <h3>Paired calibration noise</h3>
+            <p>Before a noisy command, record the same environment with nobody speaking. Do not move the source or change gain between clips.</p>
+            <ul><li>1 second each</li><li>Pair with every real noisy command</li><li>No speech or handling noise</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">03</span>
+            <h3>Unknown speech</h3>
+            <p>Record unrelated words, sentences, names, and partial commands. Include acoustically similar phrases that should not activate an effect.</p>
+            <ul><li>1.25 seconds each</li><li>Multiple speakers</li><li>Clean and noisy conditions</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">04</span>
+            <h3>Noise-only negatives</h3>
+            <p>Capture fan, HVAC, hum, static, music, conversation, traffic, keyboard sounds, and impacts without a valid command.</p>
+            <ul><li>1.25 seconds each</li><li>Quiet through very loud</li><li>Label as unknown</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">05</span>
+            <h3>Silence</h3>
+            <p>Record the system’s real noise floor in every room and with every input setup. Silence is not a file filled with digital zeros.</p>
+            <ul><li>1.25 seconds each</li><li>Keep normal input gain</li><li>Include low room ambience</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">06</span>
+            <h3>Held-out validation</h3>
+            <p>Reserve complete sessions or speakers before augmentation. Never place altered copies of one recording in multiple splits.</p>
+            <ul><li>15% validation</li><li>15% test</li><li>No augmentation leakage</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">07</span>
+            <h3>SNR augmentation</h3>
+            <p>In Python, mix clean commands with separate noise recordings at controlled levels and run the exact FPGA preprocessing model.</p>
+            <ul><li>20, 10, 5, and 0 dB SNR</li><li>Different noise segment for calibration</li><li>Keep original WAV files</li></ul>
+          </article>
+          <article>
+            <span class="guide-number">08</span>
+            <h3>Hardware test vectors</h3>
+            <p>Choose representative clean, noisy, silence, and unknown clips for bit-exact Python-to-RTL feature comparison.</p>
+            <ul><li>Do not train on these clips</li><li>Preserve raw PCM and metadata</li><li>Cover overflow edge cases</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="library-section" id="library">
+        <div class="section-heading">
+          <div><p class="eyebrow">Local library</p><h2>Recorded samples</h2></div>
+          <div class="library-filters">
+            <input id="search" type="search" placeholder="Search speaker, session, label…" />
+            <select id="filter-label"><option value="all">All labels</option></select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Sample</th><th>Label</th><th>Speaker / session</th><th>Environment</th><th>Split</th><th>Audio</th><th></th></tr></thead>
+            <tbody id="sample-table"></tbody>
+          </table>
+          <div id="empty-state" class="empty-state">
+            <strong>No samples yet</strong>
+            <span>Upload or record the first training example above.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>FPGA Audio Transformer Accelerator</span>
+      <span>Local-only dataset collection · raw audio excluded from Git</span>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -1,1 +1,19 @@
 .DS_Store
+__pycache__/
+*.pyc
+
+# Local audio dataset and generated manifest
+data/raw/
+data/manifest.json
+
+# Model outputs and generated FPGA artifacts
+*.bit
+*.bin
+*.jou
+*.log
+*.str
+*.checkpoint
+checkpoints/
+.Xil/
+*.runs/
+*.cache/
