@@ -18,3 +18,7 @@ checkpoints/
 *.runs/
 *.cache/
 build/
+
+# Generated from a local WAV by scripts/gen_alarm_rom.py
+rtl/alarm_rom.sv
+rtl/alarm_rom.mem

@@ -25,7 +25,11 @@ module audio_bringup_core #(
     output logic lrck,
     output logic sdin,
     output logic led_active,  // tone playing, or stream playing
-    output logic led_error    // FIFO overflow or underrun since last clear
+    output logic led_error,   // FIFO overflow or underrun since last clear
+    output logic frame_tick,  // one pulse per 48 kHz frame
+    output logic clear_tick,  // one pulse per btn_clear press
+    input  logic alarm_active,             // 1 = play alarm_pcm instead of tone/stream
+    input  logic signed [15:0] alarm_pcm   // alarm sample
 );
   localparam int AW = 12;                           // FIFO address bits -> 2^12 = 4096 samples
   localparam logic [31:0] TONE_INC = 32'd39370534;  // 440 Hz at 48 kHz
@@ -161,7 +165,8 @@ module audio_bringup_core #(
       // One clock after sample_req: pick the sample for the next frame.
       // (tone_phase has advanced by then, which is harmless.)
       if (req_d) begin
-        if (rd_pending) pcm <= $signed(fifo_rd_data);  // streamed sample
+        if (alarm_active) pcm <= alarm_pcm;           // alarm overrides everything
+        else if (rd_pending) pcm <= $signed(fifo_rd_data);  // streamed sample
         else if (tone_mode) pcm <= sine >>> 3;  // -18 dBFS (divide by 8 = quieter)
         else pcm <= '0;                               // nothing to play: silence
       end
@@ -173,4 +178,7 @@ module audio_bringup_core #(
 
   assign led_active = tone_mode | playing;   // LED0
   assign led_error  = err;                   // LED1
+
+  assign frame_tick = sample_req;            // lets the alarm player step in sync
+  assign clear_tick = clear_press;           // BTN1 also starts the alarm
 endmodule

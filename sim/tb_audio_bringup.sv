@@ -12,7 +12,8 @@ module tb_audio_bringup;
 
   audio_bringup_core dut (
       .clk, .rst, .uart_rxd(rxd), .btn_mode(1'b0), .btn_clear(1'b0),
-      .sclk, .lrck, .sdin, .led_active, .led_error
+      .sclk, .lrck, .sdin, .led_active, .led_error,
+      .frame_tick(), .clear_tick(), .alarm_active(1'b0), .alarm_pcm(16'sd0)
   );
 
   // ---- UART driver: 2 Mbaud = 500 ns per bit ----

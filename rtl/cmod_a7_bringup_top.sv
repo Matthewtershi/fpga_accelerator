@@ -38,13 +38,26 @@ module cmod_a7_bringup_top (
   assign rst = rst_sync[2];                          // reset seen by the rest of the design
 
   logic sclk, lrck, sdin;
+  logic led_error, frame_tick, clear_tick, alarm_active;
+  logic signed [15:0] alarm_pcm;
   audio_bringup_core u_core (        // the actual design
       .clk(clk_audio), .rst,         // .rst is shorthand for .rst(rst)
       .uart_rxd,
       .btn_mode(btn[0]), .btn_clear(btn[1]),
       .sclk, .lrck, .sdin,
-      .led_active(led[0]), .led_error(led[1])
+      .led_active(led[0]), .led_error,
+      .frame_tick, .clear_tick,
+      .alarm_active, .alarm_pcm
   );
+
+  // BTN1 plays the clip stored in block RAM (see scripts/gen_alarm_rom.py).
+  alarm_player u_alarm (
+      .clk(clk_audio), .rst,
+      .start(clear_tick), .frame(frame_tick),
+      .active(alarm_active), .pcm(alarm_pcm)
+  );
+
+  assign led[1] = led_error | alarm_active;  // LED1: error, or alarm playing
 
   assign da_lrck = lrck;             // core I2S outputs straight to the Pmod pins
   assign da_sclk = sclk;
