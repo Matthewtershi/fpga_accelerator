@@ -83,7 +83,7 @@ A first hardware test, independent of the rest of the project: stream audio from
 | LED0 | Tone or stream playing |
 | LED1 | FIFO overflow, or the stream resumed after an underrun |
 
-The host script paces itself to real time and keeps a ~40 ms lead over a 4096-sample FIFO; there is no flow control back from the FPGA. The core logic is checked in simulation with `sim/run_bringup.sh` (needs Icarus Verilog). Pin assignments in `constraints/cmod_a7_bringup.xdc` come from Digilent's master XDC and have not been checked on hardware.
+The host script paces itself to real time and keeps a ~40 ms lead over a 4096-sample FIFO; there is no flow control back from the FPGA. The core logic is checked in simulation with `sim/run_bringup.sh` (needs Icarus Verilog). Pin assignments in `constraints/cmod_a7_bringup.xdc` were checked against Digilent's Cmod A7 master XDC and Pmod I2S2 reference design, and the clocking against the CS4344 datasheet (256x MCLK at 48 kHz, I2S, 64 SCLK per frame), but not yet on hardware. The CS4344 is specified for loads of 3 kΩ or more, so headphones will be quiet; powered speakers are the better long-term load.
 
 ## Command mapping
 
