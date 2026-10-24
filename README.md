@@ -66,6 +66,25 @@ Then open [http://127.0.0.1:8000](http://127.0.0.1:8000). The dashboard records 
 
 Both paths are ignored by Git because raw recordings may be large or contain a speaker's voice. Back them up separately before deleting or moving the repository.
 
+## Serial-to-headphones bring-up
+
+A first hardware test, independent of the rest of the project: stream audio from a computer over USB serial to the Cmod A7 and play it through the Pmod I2S2 DAC.
+
+1. Plug the Pmod I2S2 into Pmod header JA (pin 1 to pin 1) and headphones into the green line-out jack. The output is line level, so keep the volume low.
+2. Build on a machine with Vivado (Windows/Linux): `vivado -mode batch -source scripts/build_bringup.tcl`. The bitstream lands in `build/bringup/`. Program it with Hardware Manager, or `openFPGALoader -b cmod_a7_35t build/bringup/cmod_a7_bringup.bit` (works from macOS).
+3. On boot the board plays a 440 Hz tone (LED0 on). If you hear it, the clocks, I2S, and wiring are good.
+4. Stream audio: `pip install pyserial`, then `python3 scripts/send_audio.py --tone 880` or `python3 scripts/send_audio.py clip.wav`. The first received byte switches to stream mode.
+
+| Item | Behavior |
+| --- | --- |
+| Stream format | Signed 16-bit little-endian mono, 48 kHz, 2 Mbaud 8N1 (sent to both channels) |
+| BTN0 | Toggle test tone / serial stream |
+| BTN1 | Clear the error LED |
+| LED0 | Tone or stream playing |
+| LED1 | FIFO overflow, or the stream resumed after an underrun |
+
+The host script paces itself to real time and keeps a ~40 ms lead over a 4096-sample FIFO; there is no flow control back from the FPGA. The core logic is checked in simulation with `sim/run_bringup.sh` (needs Icarus Verilog). Pin assignments in `constraints/cmod_a7_bringup.xdc` come from Digilent's master XDC and have not been checked on hardware.
+
 ## Command mapping
 
 | Spoken command | FPGA action |

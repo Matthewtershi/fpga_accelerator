@@ -17,3 +17,4 @@ checkpoints/
 .Xil/
 *.runs/
 *.cache/
+build/
